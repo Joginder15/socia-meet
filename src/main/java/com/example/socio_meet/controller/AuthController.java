@@ -3,24 +3,20 @@ package com.example.socio_meet.controller;
 import com.example.socio_meet.dto.LoginRequest;
 import com.example.socio_meet.dto.RegisterRequest;
 import com.example.socio_meet.service.AuthService;
+import com.example.socio_meet.service.RefreshTokenService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService service;
-
-
-    public AuthController(AuthService service) {
-        this.service = service;
-    }
+    private final RefreshTokenService refreshTokenService;
 
     @PostMapping("/signup")
     public ResponseEntity<?> signup(@Valid @RequestBody RegisterRequest request){
@@ -36,8 +32,14 @@ public class AuthController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest request){
         try {
             return ResponseEntity.ok(service.login(request));
-        } catch (BadCredentialsException e){
+        } catch (BadCredentialsException exception){
             return ResponseEntity.status(401).body("Invalid credentials");
         }
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<?> logout(@RequestHeader("refresh-token") String refreshToken){
+        refreshTokenService.deleteByToken(refreshToken);
+        return ResponseEntity.ok("Logged out successfully");
     }
 }

@@ -4,9 +4,11 @@ import com.example.socio_meet.config.JwtUtil;
 import com.example.socio_meet.dto.AuthResponse;
 import com.example.socio_meet.dto.LoginRequest;
 import com.example.socio_meet.dto.RegisterRequest;
+import com.example.socio_meet.model.RefreshToken;
 import com.example.socio_meet.model.User;
 import com.example.socio_meet.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,22 +19,14 @@ import java.util.Set;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
-
-    public AuthService(UserRepository userRepository,
-                       PasswordEncoder passwordEncoder,
-                       AuthenticationManager authenticationManager,
-                       JwtUtil jwtUtil) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.authenticationManager = authenticationManager;
-        this.jwtUtil = jwtUtil;
-    }
+    private final RefreshTokenService refreshTokenService;
 
     public void signup(RegisterRequest request){
         if (userRepository.existsByEmail(request.email())){
@@ -52,14 +46,16 @@ public class AuthService {
     }
 
     public AuthResponse login(LoginRequest request){
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password()));
+        authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.email(),
+                request.password()));
 
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         String token = jwtUtil.generateToken(user.getId(), user.getRoles());
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getId());
 
-        return new AuthResponse(token, "Bearer", jwtUtil.getExpirationDate(token).getTime());
+        return new AuthResponse(token, refreshToken.getToken(),
+                "Bearer", jwtUtil.getExpirationDate(token).getTime());
     }
 }
