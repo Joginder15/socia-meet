@@ -29,6 +29,7 @@ public class RefreshTokenService {
         return repository.save(refreshToken);
     }
 
+    @Transactional
     public void revokeToken(String token) {
         repository.findByToken(token).ifPresent(revToken ->{
             revToken.setRevoked(true);
@@ -40,8 +41,4 @@ public class RefreshTokenService {
     public void deleteByToken(String token){
         repository.deleteByToken(token);
     }
-
-
-
-
 }
